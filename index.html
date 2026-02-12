@@ -3,12 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Power Apps Launcher</title>
+<title>Power Apps Deep Link Launcher</title>
+
 <style>
   body {
     margin: 0;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: #f4f4f4;
+    background: #f3f3f3;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -70,13 +71,13 @@
 <body>
 
 <div class="container">
-  <!-- Replace with your Power Apps logo image -->
+  <!-- Replace with your logo image if desired -->
   <img class="logo" src="powerapps-logo.png" alt="Power Apps" />
 
   <h2>Power Apps</h2>
   <p>
-    To get the best experience and full set of capabilities on your device,
-    use the Power Apps app.
+    To get the best experience and full capabilities on your device,
+    use the Power Apps mobile app.
   </p>
 
   <button class="primary-btn" onclick="openApp()">Open the app</button>
@@ -84,11 +85,72 @@
 </div>
 
 <script>
-const appScheme = "ms-apps://cordlifesg-validation.crm5.dynamics.com_d9f42236-18bd-4051-9532-3e2fdb8eed40?tenantId=ae576e0e-ec54-4eb6-8cc0-d72c34dec8f9&environmentId=3659aeb9-1b18-e0d1-8f4c-7eff79461995&appLogicalName=cgl_CordlifeCRM&appType=AppModule&openApp=true&restartApp=true&forceOfflineDataSync=true&pagetype=entityrecord&etn=lead&id=408574d2-fe7f-4955-bc84-27a0e7a267fe";
-const browserUrl = "https://contoso.crm5.dynamics.com/main.aspx?appid=d9f42236-18bd-4051-9532-3e2fdb8eed40&pagetype=entityrecord&etn=lead&id=408574d2-fe7f-4955-bc84-27a0e7a267fe";
+// =============================
+// CONFIG — default fallback values
+// (used if URL parameters are not provided)
+// =============================
+const defaultParams = {
+  orgUrl: "contoso.crm5.dynamics.com",
+  appId: "d9f42236-18bd-4051-9532-3e2fdb8eed40",
+  tenantId: "TENANT-ID",
+  environmentId: "ENVIRONMENT-ID",
+  appLogicalName: "crmmodule",
+  entityName: "lead",
+  recordId: "408574d2-fe7f-4955-bc84-27a0e7a267fe"
+};
+
+// =============================
+// Browser URL builder (Dynamics web fallback)
+// =============================
+function buildBrowserUrl(params) {
+  return `https://${params.orgUrl}/main.aspx?appid=${params.appId}&pagetype=entityrecord&etn=${params.entityName}&id=${params.recordId}`;
+}
+
 const androidStore = "https://play.google.com/store/apps/details?id=com.microsoft.msapps&hl=en";
 const iosStore = "https://apps.apple.com/us/app/power-apps/id1047318566";
 
+// =============================
+// Utility — read URL parameters
+// =============================
+function getParamsFromUrl() {
+  const p = new URLSearchParams(window.location.search);
+
+  return {
+    orgUrl: p.get("orgUrl") || defaultParams.orgUrl,
+    appId: p.get("appId") || defaultParams.appId,
+    tenantId: p.get("tenantId") || defaultParams.tenantId,
+    environmentId: p.get("environmentId") || defaultParams.environmentId,
+    appLogicalName: p.get("appLogicalName") || defaultParams.appLogicalName,
+    entityName: p.get("etn") || defaultParams.entityName,
+    recordId: p.get("id") || defaultParams.recordId
+  };
+}
+
+// =============================
+// Deep link builder
+// =============================
+function buildAppScheme(params) {
+  const base = `ms-apps://${params.orgUrl}_${params.appId}`;
+
+  const query = new URLSearchParams({
+    tenantId: params.tenantId,
+    environmentId: params.environmentId,
+    appLogicalName: params.appLogicalName,
+    appType: "AppModule",
+    openApp: "true",
+    restartApp: "true",
+    forceOfflineDataSync: "true",
+    pagetype: "entityrecord",
+    etn: params.entityName,
+    id: params.recordId
+  });
+
+  return `${base}?${query.toString()}`;
+}
+
+// =============================
+// Device detection
+// =============================
 function detectOS() {
   const ua = navigator.userAgent || navigator.vendor || window.opera;
 
@@ -97,18 +159,20 @@ function detectOS() {
   return "other";
 }
 
+// =============================
+// Main actions
+// =============================
 function openApp() {
+  const params = getParamsFromUrl();
+  const scheme = buildAppScheme(params);
   const os = detectOS();
   const start = Date.now();
 
-  // Try to open app
-  window.location = appScheme;
+  window.location = scheme;
 
-  // Fallback after delay
   setTimeout(() => {
     const elapsed = Date.now() - start;
 
-    // If app didn’t open, redirect to store
     if (elapsed < 2000) {
       if (os === "android") window.location = androidStore;
       else if (os === "ios") window.location = iosStore;
@@ -117,11 +181,11 @@ function openApp() {
 }
 
 function continueBrowser() {
+  const params = getParamsFromUrl();
+  const browserUrl = buildBrowserUrl(params);
   window.location = browserUrl;
 }
 </script>
 
 </body>
-
 </html>
-
