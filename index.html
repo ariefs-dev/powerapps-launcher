@@ -87,8 +87,9 @@
 <script>
 // =============================
 // CONFIG — default fallback values
-// (used if URL parameters are not provided)
 // =============================
+console.log("[Launcher] Script loaded");
+
 const defaultParams = {
   orgUrl: "contoso.crm5.dynamics.com",
   appId: "d9f42236-18bd-4051-9532-3e2fdb8eed40",
@@ -99,13 +100,6 @@ const defaultParams = {
   recordId: "408574d2-fe7f-4955-bc84-27a0e7a267fe"
 };
 
-// =============================
-// Browser URL builder (Dynamics web fallback)
-// =============================
-function buildBrowserUrl(params) {
-  return `https://${params.orgUrl}/main.aspx?appid=${params.appId}&pagetype=entityrecord&etn=${params.entityName}&id=${params.recordId}`;
-}
-
 const androidStore = "https://play.google.com/store/apps/details?id=com.microsoft.msapps&hl=en";
 const iosStore = "https://apps.apple.com/us/app/power-apps/id1047318566";
 
@@ -113,9 +107,11 @@ const iosStore = "https://apps.apple.com/us/app/power-apps/id1047318566";
 // Utility — read URL parameters
 // =============================
 function getParamsFromUrl() {
+  console.log("[Launcher] Reading URL parameters...");
+
   const p = new URLSearchParams(window.location.search);
 
-  return {
+  const params = {
     orgUrl: p.get("orgUrl") || defaultParams.orgUrl,
     appId: p.get("appId") || defaultParams.appId,
     tenantId: p.get("tenantId") || defaultParams.tenantId,
@@ -124,12 +120,17 @@ function getParamsFromUrl() {
     entityName: p.get("etn") || defaultParams.entityName,
     recordId: p.get("id") || defaultParams.recordId
   };
+
+  console.log("[Launcher] Parameters resolved:", params);
+  return params;
 }
 
 // =============================
 // Deep link builder
 // =============================
 function buildAppScheme(params) {
+  console.log("[Launcher] Building ms-apps deep link...");
+
   const base = `ms-apps://${params.orgUrl}_${params.appId}`;
 
   const query = new URLSearchParams({
@@ -145,7 +146,22 @@ function buildAppScheme(params) {
     id: params.recordId
   });
 
-  return `${base}?${query.toString()}`;
+  const scheme = `${base}?${query.toString()}`;
+
+  console.log("[Launcher] Deep link built:", scheme);
+  return scheme;
+}
+
+// =============================
+// Browser URL builder
+// =============================
+function buildBrowserUrl(params) {
+  console.log("[Launcher] Building browser fallback URL...");
+
+  const url = `https://${params.orgUrl}/main.aspx?appid=${params.appId}&pagetype=entityrecord&etn=${params.entityName}&id=${params.recordId}`;
+
+  console.log("[Launcher] Browser URL:", url);
+  return url;
 }
 
 // =============================
@@ -154,37 +170,63 @@ function buildAppScheme(params) {
 function detectOS() {
   const ua = navigator.userAgent || navigator.vendor || window.opera;
 
-  if (/android/i.test(ua)) return "android";
-  if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) return "ios";
-  return "other";
+  let os = "other";
+
+  if (/android/i.test(ua)) os = "android";
+  else if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) os = "ios";
+
+  console.log("[Launcher] Detected OS:", os);
+  return os;
 }
 
 // =============================
 // Main actions
 // =============================
 function openApp() {
+  console.log("[Launcher] Open App button clicked");
+
   const params = getParamsFromUrl();
   const scheme = buildAppScheme(params);
   const os = detectOS();
   const start = Date.now();
 
+  console.log("[Launcher] Attempting to open app via deep link...");
   window.location = scheme;
 
   setTimeout(() => {
     const elapsed = Date.now() - start;
 
+    console.log("[Launcher] Fallback timer triggered. Elapsed:", elapsed);
+
     if (elapsed < 2000) {
-      if (os === "android") window.location = androidStore;
-      else if (os === "ios") window.location = iosStore;
+      console.log("[Launcher] App may not be installed — redirecting to store");
+
+      if (os === "android") {
+        console.log("[Launcher] Redirect → Android Play Store");
+        window.location = androidStore;
+      }
+      else if (os === "ios") {
+        console.log("[Launcher] Redirect → iOS App Store");
+        window.location = iosStore;
+      }
+      else {
+        console.log("[Launcher] Unknown OS — no store redirect");
+      }
     }
   }, 1500);
 }
 
 function continueBrowser() {
+  console.log("[Launcher] Continue in browser clicked");
+
   const params = getParamsFromUrl();
   const browserUrl = buildBrowserUrl(params);
+
+  console.log("[Launcher] Navigating to browser URL...");
   window.location = browserUrl;
 }
+
+console.log("[Launcher] Ready");
 </script>
 
 </body>
